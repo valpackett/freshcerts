@@ -1,0 +1,68 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    acme-client (0.2.2)
+      faraday (~> 0.9, >= 0.9.1)
+      json-jwt (~> 1.2, >= 1.2.3)
+    activesupport (4.2.5)
+      i18n (~> 0.7)
+      json (~> 1.7, >= 1.7.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    backports (3.6.7)
+    bindata (2.1.0)
+    erubis (2.7.0)
+    faraday (0.9.2)
+      multipart-post (>= 1.2, < 3)
+    i18n (0.7.0)
+    json (1.8.3)
+    json-jwt (1.5.1)
+      activesupport
+      bindata
+      multi_json (>= 1.3)
+      securecompare
+      url_safe_base64
+    minitest (5.8.3)
+    multi_json (1.11.2)
+    multipart-post (2.0.0)
+    puma (2.15.3)
+    rack (1.6.4)
+    rack-attack (4.3.0)
+      rack
+    rack-protection (1.5.3)
+      rack
+    rack-test (0.6.3)
+      rack (>= 1.0)
+    securecompare (1.0.0)
+    sinatra (1.4.6)
+      rack (~> 1.4)
+      rack-protection (~> 1.4)
+      tilt (>= 1.3, < 3)
+    sinatra-contrib (1.4.6)
+      backports (>= 2.0)
+      multi_json
+      rack-protection
+      rack-test
+      sinatra (~> 1.4.0)
+      tilt (>= 1.3, < 3)
+    thread_safe (0.3.5)
+    tilt (2.0.1)
+    tzinfo (1.2.2)
+      thread_safe (~> 0.1)
+    url_safe_base64 (0.2.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  acme-client
+  activesupport
+  erubis
+  puma
+  rack-attack
+  sinatra
+  sinatra-contrib
+
+BUNDLED WITH
+   1.10.6
