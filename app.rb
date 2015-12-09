@@ -1,5 +1,6 @@
 require 'sinatra/base'
 require 'sinatra/streaming' # IO object compatibility
+require 'tilt/erubis'
 require 'openssl'
 require 'acme-client'
 require 'yaml/store'
@@ -85,7 +86,19 @@ class App < Sinatra::Base
     end
   end
 
+  get '/robots.txt' do
+    "User-agent: *\nDisallow: /"
+  end
+
+  get '/humans.txt' do
+    'freshcerts <https://github.com/myfreeweb/freshcerts> is created by Greg <https://unrelenting.technology>'
+  end
+
   get '/' do
-    'Hello world!'
+    domains = $store.transaction(true) do
+      Hash[$store.roots.map { |k| [k, $store[k]] }]
+    end
+    headers "Refresh" => "30"
+    erb :index, :locals => { :domains => domains, :config_host => request.host, :config_port => request.port }
   end
 end
