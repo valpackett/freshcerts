@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>freshcerts</title>
+
+<style>
+html { font-family: sans-serif; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; background: #2980b9; color: #34495e; }
+body { margin: 3em auto; width: 96%; }
+main { background: #ecf0f1; padding: 1em; }
+a { background-color: transparent; color: #16a085; }
+a:active, a:hover { outline: 0; color: #27ae60; }
+h1 { font-size: 2em; margin: 1rem; color: #ecf0f1; }
+table { border-collapse: collapse; border-spacing: 0; table-layout: fixed; width: 100%; word-wrap: break-word; }
+thead { background: #16a085; color: #ecf0f1; }
+td, th { padding: 0.6em 1em; text-align: left; }
+tbody tr:nth-child(odd) { background: rgba(0, 0, 0, 0.1); }
+tr, a { transition: ease 0.2s all; }
+tbody tr:hover, tbody tr:focus { background: rgba(0, 0, 0, 0.35); color: #ecf0f1; }
+tbody tr:hover a, tbody tr:focus a { color: #ecf0f1; }
+h2 { margin: 2rem 0 0.5rem; color: #2c3e50; }
+h2:first-child { margin-top: 0.5rem; }
+.status-fresh { background: #f1c40f; color: #2c3e50; }
+.status-ok { background: #2ecc71; color: #ecf0f1; }
+.status-wrongcert { background: #e74c3c; color: #ecf0f1; }
+@media screen and (max-width: 700px) {
+  .digest { display: none; }
+  body { width: 100%; }
+}
+</style>
+
+<h1>freshcerts</h1>
+<main>
+  <h2>certificates issued through this server</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Domain</th>
+        <th>Ports</th>
+        <th>Last checked</th>
+        <th>Cert expires</th>
+        <th class="digest">Cert SHA-256 digest</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% domains.each do |domain, site| %>
+        <tr>
+          <td class="status-<%= site.status.to_s.gsub(/[^a-z]/, '') %>"><%= site.status %></td>
+          <td><a href="https://<%= domain %>"><%= domain %></a></td>
+          <td><%= site.ports.join(', ') %></td>
+          <td><time><%= site.last_checked %></time></td>
+          <td><time><%= site.expires %></time></td>
+          <td class="digest"><code><%= site.public_key_sha256 %></code></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <h2>nginx configuration</h2>
+  <p>domain verification:</p>
+  <pre><code>
+location ^~ /.well-known/acme-challenge/ {
+	proxy_set_header Host $host;
+	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+	proxy_pass http://<%= config_host %>:<%= config_port %>;
+}
+  </code></pre>
+  <p>strong TLS settings: <a href="https://cipherli.st">cipherli.st</a></p>
+</main>
