@@ -19,11 +19,11 @@ $acme_client = Acme::Client.new :private_key => pkey, :endpoint => ACME_ENDPOINT
 
 $store = YAML::Store.new STORE_PATH
 $store.ultra_safe = true
-$store.thread_safe = true # LOL: it's set to {} because the initializer calls super without args, and the 2nd arg has a different meaning
+$store.instance_eval { |_| @thread_safe = true } # LOL: it's set to {} because the initializer calls super without args, and the 2nd arg has a different meaning
 
 $challenges = {}
 
-Site = Struct.new :ports, :status, :last_checked, :public_key_sha256
+Site = Struct.new :ports, :status, :last_checked, :public_key_sha256, :expires
 
 class App < Sinatra::Base
   helpers Sinatra::Streaming
@@ -36,27 +36,40 @@ class App < Sinatra::Base
   end
 
   post '/v1/cert' do
-    csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
+    begin
+      csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
+    rescue
+      halt 400, 'Could not read the CSR. You should send a valid CSR as a multipart part named "csr".'
+    end
     domain = params[:domain]
+    unless !domain.nil? && domain =~ /(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}\.?$)/
+      halt 400, "Domain '#{domain}' is not valid."
+    end
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
+
     authorization = $acme_client.authorize :domain => domain
     challenge = authorization.http01
     challenge_id = challenge.filename.sub(/.*challenge\/?/, '')
     $challenges[challenge_id] = challenge.file_content
-    logger.info "Challenge for domain #{domain}: id #{challenge_id}"
+    logger.info "challenge domain=#{domain} id=#{challenge_id}"
     sleep 0.1
     challenge.request_verification
-    while challenge.verify_status == 'pending'
+    status = nil
+    while (status = challenge.verify_status) == 'pending'
       sleep 0.5
     end
-    unless challenge.verify_status == 'valid'
+    logger.info "challenge domain=#{domain} id=#{challenge_id} status=#{status}"
+    unless status == 'valid'
       $challenges.delete challenge_id
-      halt 400
+      halt 400, "CA returned challenge validation status: #{status}."
     end
     $challenges.delete challenge_id
+
     certificate = $acme_client.new_certificate(csr)
+    sha256hash = OpenSSL::Digest::SHA256.hexdigest(certificate.to_der).scan(/../).join(':')
+    logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{sha256hash} expires=#{certificate.x509.not_after.to_s}"
     $store.transaction do
-      $store[domain] = Site.new ports, :fresh, Time.now, OpenSSL::Digest::SHA256.hexdigest(certificate.to_der).scan(/../).join(':')
+      $store[domain] = Site.new ports, :fresh, Time.now, sha256hash, certificate.x509.not_after
     end
     content_type 'application/x-tar'
     stream do |out|
