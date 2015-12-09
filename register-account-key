@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+require './app'
+
+print "Contact (e.g. mailto:your@email.address): "
+registration = $acme_client.register :contact => gets.strip
+registration.agree_terms
+p registration
