@@ -1,12 +1,15 @@
 #!/bin/sh
+# Freshcerts client
+# https://github.com/myfreeweb/freshcerts
+
+FRESHCERTS_HOST="localhost:9292"
+KEYS_DIRECTORY="/usr/local/etc/certs"
 
 DOMAIN="$1"
 CN="$2"
 PORTS="$3"
 RELOAD_CMD="$4"
 
-FRESHCERTS_HOST="localhost:9292"
-KEYS_DIRECTORY="tmp"
 KEY_PATH="${KEYS_DIRECTORY}/${DOMAIN}.key.pem"
 
 curl -f "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/should_reissue" 2>/dev/null && \
