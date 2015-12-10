@@ -116,6 +116,7 @@ class App < Sinatra::Base
       :domains => domains,
       :config_host => request.host,
       :config_port => request.port,
+      :config_secure => request.secure?,
       :client_script => CLIENT_SCRIPT
     }
   end
