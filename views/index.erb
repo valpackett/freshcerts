@@ -22,7 +22,7 @@ h2 { margin: 2rem 0 0.5rem; color: #2c3e50; }
 h2:first-child { margin-top: 0.5rem; }
 .status-fresh { background: #f1c40f; color: #2c3e50; }
 .status-ok { background: #2ecc71; color: #ecf0f1; }
-.status-wrongcert { background: #e74c3c; color: #ecf0f1; }
+.status-wrongcert, .status-connerror { background: #e74c3c; color: #ecf0f1; }
 @media screen and (max-width: 700px) {
   .digest { display: none; }
   body { width: 100%; }
@@ -51,7 +51,7 @@ h2:first-child { margin-top: 0.5rem; }
           <td><%= site.ports.join(', ') %></td>
           <td><time><%= site.last_checked %></time></td>
           <td><time><%= site.expires %></time></td>
-          <td class="digest"><code><%= site.public_key_sha256 %></code></td>
+          <td class="digest"><code><%= site.cert_sha256 %></code></td>
         </tr>
       <% end %>
     </tbody>
