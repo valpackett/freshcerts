@@ -17,6 +17,7 @@ tbody tr:nth-child(odd) { background: rgba(0, 0, 0, 0.1); }
 tr, a { transition: ease 0.2s all; }
 tbody tr:hover, tbody tr:focus { background: rgba(0, 0, 0, 0.35); color: #ecf0f1; }
 tbody tr:hover a, tbody tr:focus a { color: #ecf0f1; }
+pre { white-space: pre-wrap; word-wrap: break-all; }
 h2 { margin: 2rem 0 0.5rem; color: #2c3e50; }
 h2:first-child { margin-top: 0.5rem; }
 .status-fresh { background: #f1c40f; color: #2c3e50; }
@@ -66,4 +67,7 @@ location ^~ /.well-known/acme-challenge/ {
 }
   </code></pre>
   <p>strong TLS settings: <a href="https://cipherli.st">cipherli.st</a></p>
+
+  <h2>client script for cron</h2>
+  <pre><code><%= client_script %></code></pre>
 </main>

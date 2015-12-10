@@ -1,6 +1,7 @@
 require 'sinatra/base'
 require 'sinatra/streaming' # IO object compatibility
 require 'tilt/erubis'
+require 'active_support/time'
 require 'openssl'
 require 'acme-client'
 require 'yaml/store'
@@ -10,6 +11,8 @@ ACME_ENDPOINT    = ENV['ACME_ENDPOINT']    || 'https://acme-staging.api.letsencr
 DATA_ROOT        = ENV['DATA_ROOT']        || File.join(File.dirname(__FILE__), 'data')
 ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
 STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
+
+CLIENT_SCRIPT    = File.read File.join File.dirname(__FILE__), 'freshcerts-client'
 
 unless File.exist? ACCOUNT_KEY_PATH
   STDERR.puts "No account key found at #{ACCOUNT_KEY_PATH}. Create one with `openssl genrsa -out #{ACCOUNT_KEY_PATH} 4096`."
@@ -36,7 +39,17 @@ class App < Sinatra::Base
     $challenges[params[:id]]
   end
 
-  post '/v1/cert' do
+  get '/v1/cert/:domain/should_reissue' do
+    site = $store.transaction(true) do
+      $store[params[:domain]]
+    end
+    halt 200, "No certs for domain #{params[:domain]} have been issued yet!\n" if site.nil?
+    halt 200, "Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
+    halt 200, "Wrong cert is used!\n" if site.status == :wrong_cert
+    halt 400, "Everything is OK, no reissue required.\n"
+  end
+
+  post '/v1/cert/:domain/issue' do
     begin
       csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
     rescue
@@ -99,6 +112,11 @@ class App < Sinatra::Base
       Hash[$store.roots.map { |k| [k, $store[k]] }]
     end
     headers "Refresh" => "30"
-    erb :index, :locals => { :domains => domains, :config_host => request.host, :config_port => request.port }
+    erb :index, :locals => {
+      :domains => domains,
+      :config_host => request.host,
+      :config_port => request.port,
+      :client_script => CLIENT_SCRIPT
+    }
   end
 end
