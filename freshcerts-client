@@ -2,8 +2,8 @@
 # Freshcerts client
 # https://github.com/myfreeweb/freshcerts
 
-FRESHCERTS_HOST="localhost:9292"
-KEYS_DIRECTORY="/usr/local/etc/certs"
+: ${FRESHCERTS_HOST:="localhost:9292"}
+: ${KEYS_DIRECTORY:="/usr/local/etc/certs"}
 
 DOMAIN="$1"
 CN="$2"

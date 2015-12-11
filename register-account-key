@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require './app'
+require './common'
 
 print "Contact (e.g. mailto:your@email.address): "
 registration = $acme_client.register :contact => gets.strip

@@ -52,12 +52,10 @@ Configure the HTTP server to forward `/.well-known/acme-challenge/*` requests to
 
 Configure cron to run the `freshcerts-client` script every day.
 
-Don't forget to change the configuration inside of the script.
-
 Args: domain, subject, ports (comma separated), reload command. Like this:
 
 ```
-freshcerts-client example.com /CN=example.com 443 "service nginx reload"
+FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com /CN=example.com 443 "service nginx reload"
 ```
 
 Figure out cert paths and file permissions :-)
