@@ -2,34 +2,41 @@ require 'openssl'
 require 'active_support/time'
 require './common'
 
-def check_sites
-  $store.transaction do
-    $store.roots.each do |domain|
-      site = $store[domain]
+module Freshcerts::Monitoring
+  def self.check_site(domain, port, wanted_hash)
+    OpenSSL::SSL::SSLSocket.new(TCPSocket.new(domain, port)).tap do |sock|
+      sock.sync_close = true
+      sock.connect
+      found_hash = Freshcerts.hash_cert(sock.peer_cert)
+      yield (wanted_hash == found_hash ? :ok : :wrong_cert), found_hash
+      sock.close
+    end
+  end
+
+  def self.check_sites
+    Freshcerts.sites.all.each do |domain, site|
       site.ports.each do |port|
         begin
           puts "Checking #{domain}:#{port}"
-          OpenSSL::SSL::SSLSocket.new(TCPSocket.new(domain, port)).tap do |sock|
-            sock.sync_close = true
-            sock.connect
-            cert_sha256 = hash_cert(sock.peer_cert)
-            site.last_checked = Time.now
-            site.status = site.cert_sha256 == cert_sha256 ? :ok : :wrong_cert
-            if site.status == :wrong_cert
-              puts "#{domain}:#{port} wrong cert: #{cert_sha256}, should be #{site.cert_sha256}"
+          wanted_hash = site.cert_sha256
+          check_site(domain, port, wanted_hash) do |status, found_hash|
+            if status == :wrong_cert
+              puts "#{domain}:#{port} wrong cert: #{found_hash}, should be #{wanted_hash}"
             else
               puts "#{domain}:#{port} ok"
             end
-            sock.close
+            site.status = status
           end
         rescue Exception => e
           puts "#{domain}:#{port} exception"
           p e
           site.status = :conn_error
         end
+        site.last_checked = Time.now
+        Freshcerts.sites[domain] = site
         sleep 2.seconds
       end
     end
+    sleep 5.minutes
   end
-  sleep 5.minutes
 end

@@ -2,7 +2,7 @@ require './monitoring'
 
 Thread.new do
   loop do
-    check_sites
+    Freshcerts::Monitoring.check_sites
   end
 end
 
@@ -15,4 +15,4 @@ Rack::Attack.throttle('req/ip', :limit => 4, :period => 1.second) do |req|
 end
 
 use Rack::Attack
-run App
+run Freshcerts::App
