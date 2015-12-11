@@ -3,10 +3,11 @@ require 'sinatra/streaming' # IO object compatibility
 require 'tilt/erubis'
 require 'active_support/time'
 require 'openssl'
+require 'thread_safe'
 require 'rubygems/package'
 require './common'
 
-$challenges = {}
+$challenges = ThreadSafe::Cache.new
 
 class Freshcerts::App < Sinatra::Base
   helpers Sinatra::Streaming
