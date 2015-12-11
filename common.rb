@@ -1,17 +1,25 @@
 require 'openssl'
 require 'acme-client'
 require 'yaml/store'
+require 'mail'
 
 ACME_ENDPOINT    = ENV['ACME_ENDPOINT']    || 'https://acme-staging.api.letsencrypt.org/'
 DATA_ROOT        = ENV['DATA_ROOT']        || File.join(File.dirname(__FILE__), 'data')
 ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
 STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
+ADMIN_EMAIL      = ENV['ADMIN_EMAIL']      || 'root@localhost'
+SMTP_ADDRESS     = ENV['SMTP_ADDRESS']     || 'localhost'
+SMTP_PORT        =(ENV['SMTP_PORT']        || '25').to_i
 
 CLIENT_SCRIPT    = File.read File.join File.dirname(__FILE__), 'freshcerts-client'
 
 unless File.exist? ACCOUNT_KEY_PATH
   STDERR.puts "No account key found at #{ACCOUNT_KEY_PATH}. Create one with `openssl genrsa -out #{ACCOUNT_KEY_PATH} 4096`."
   exit 1
+end
+
+Mail.defaults do
+  delivery_method :smtp, :address => SMTP_ADDRESS, :port => SMTP_PORT
 end
 
 module Freshcerts
@@ -53,5 +61,14 @@ module Freshcerts
 
   def self.hash_cert(certificate)
     OpenSSL::Digest::SHA256.hexdigest(certificate.to_der).scan(/../).join(':')
+  end
+
+  def self.notify_admin(event, description)
+    Mail.new {
+      from "#{Etc.getlogin}@#{Socket.gethostname}"
+      to ADMIN_EMAIL
+      subject "freshcerts event: #{event}"
+      body description
+    }.deliver
   end
 end
