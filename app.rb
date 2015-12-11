@@ -28,15 +28,20 @@ class Freshcerts::App < Sinatra::Base
     halt 400, "Everything is OK, no reissue required.\n"
   end
 
+  def issue_error!(msg)
+    Freshcerts.notify_admin 'certificate issue error', "Error message:\n#{msg}\n\nRequest:\n#{request.to_yaml}"
+    halt 400, msg
+  end
+
   post '/v1/cert/:domain/issue' do
     begin
       csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
     rescue
-      halt 400, 'Could not read the CSR. You should send a valid CSR as a multipart part named "csr".'
+      issue_error! 'Could not read the CSR. You should send a valid CSR as a multipart part named "csr".'
     end
     domain = params[:domain]
     unless !domain.nil? && domain =~ /(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}\.?$)/
-      halt 400, "Domain '#{domain}' is not valid."
+      issue_error! "Domain '#{domain}' is not valid."
     end
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
 
@@ -54,14 +59,14 @@ class Freshcerts::App < Sinatra::Base
     logger.info "challenge domain=#{domain} id=#{challenge_id} status=#{status}"
     unless status == 'valid'
       $challenges.delete challenge_id
-      halt 400, "CA returned challenge validation status: #{status}."
+      issue_error! "CA returned challenge validation status: #{status}."
     end
     $challenges.delete challenge_id
 
     certificate = Freshcerts.acme.new_certificate(csr)
-    sha256hash = Freshcerts.hash_cert certificate
-    logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{sha256hash} expires=#{certificate.x509.not_after.to_s}"
-    Freshcerts.sites[domain] = Freshcerts::Site.new ports, :fresh, Time.now, sha256hash, certificate.x509.not_after
+    cert_hash = Freshcerts.hash_cert certificate
+    logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{cert_hash} expires=#{certificate.x509.not_after.to_s}"
+    Freshcerts.sites[domain] = Freshcerts::Site.new ports, :fresh, Time.now, cert_hash, certificate.x509.not_after
     content_type 'application/x-tar'
     stream do |out|
       Gem::Package::TarWriter.new(out) do |tar|
@@ -74,6 +79,8 @@ class Freshcerts::App < Sinatra::Base
       end
       out.flush
     end
+    Freshcerts.notify_admin "successfully issued a certificate for #{domain}",
+      "Successfully issued a certificate for domain #{domain}!\nSHA-256 fingerprint: #{cert_hash}.\n\nRequest:\n#{request.to_yaml}"
   end
 
   get '/robots.txt' do

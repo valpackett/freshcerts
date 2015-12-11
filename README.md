@@ -5,10 +5,12 @@
 Most ACME clients are designed to run on the same machine as your TLS services. 
 But if you have a lot of servers, there are two problems with that:
 - you either have to copy your account private key onto all of them, or register multiple accounts;
-- you don't have a nice monitoring dashboard!
+- you don't have a nice monitoring dashboard & notifications!
 
 freshcerts solves both problems.
 It runs a server that exposes a much simpler API to your servers (they'll use a tiny shell script that's pretty much `openssl | curl | tar`) and a dashboard to your system administrators.
+Servers are monitored to ensure they actually use the certs issued for them.
+Email notifications are sent to the admins for all errors found by monitoring and for all issued certificates.
 
 ## Installation
 
@@ -21,10 +23,12 @@ $ bundle install --path vendor/bundle
 $ mkdir data
 ```
 
-Use environment variables to change the ACME endpoint (by default, Let's Encrypt **staging** is used, not production):
+Use environment variables to configure the app.
+You probably should change the ACME endpoint (by default, Let's Encrypt **staging** is used, not production):
 
 ```bash
 $ export ACME_ENDPOINT="https://acme-v01.api.letsencrypt.org/"
+$ export ADMIN_EMAIL="support@example.com"
 ```
 
 Generate and register an account key:
