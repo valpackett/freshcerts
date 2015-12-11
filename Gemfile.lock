@@ -63,6 +63,7 @@ DEPENDENCIES
   rack-attack
   sinatra
   sinatra-contrib
+  thread_safe
 
 BUNDLED WITH
    1.10.6
