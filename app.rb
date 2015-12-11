@@ -8,7 +8,7 @@ require './common'
 
 $challenges = {}
 
-class App < Sinatra::Base
+class Freshcerts::App < Sinatra::Base
   helpers Sinatra::Streaming
   configure :production, :development do
     enable :logging
@@ -19,9 +19,7 @@ class App < Sinatra::Base
   end
 
   get '/v1/cert/:domain/should_reissue' do
-    site = $store.transaction(true) do
-      $store[params[:domain]]
-    end
+    site = Freshcerts.sites[params[:domain]]
     halt 200, "Reissue reason: No certs for domain #{params[:domain]} have been issued yet!\n" if site.nil?
     halt 200, "Reissue reason: Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
     halt 200, "Reissue reason: Wrong cert is used!\n" if site.status == :wrong_cert
@@ -41,7 +39,7 @@ class App < Sinatra::Base
     end
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
 
-    authorization = $acme_client.authorize :domain => domain
+    authorization = Freshcerts.acme.authorize :domain => domain
     challenge = authorization.http01
     challenge_id = challenge.filename.sub(/.*challenge\/?/, '')
     $challenges[challenge_id] = challenge.file_content
@@ -59,12 +57,10 @@ class App < Sinatra::Base
     end
     $challenges.delete challenge_id
 
-    certificate = $acme_client.new_certificate(csr)
-    sha256hash = hash_cert certificate
+    certificate = Freshcerts.acme.new_certificate(csr)
+    sha256hash = Freshcerts.hash_cert certificate
     logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{sha256hash} expires=#{certificate.x509.not_after.to_s}"
-    $store.transaction do
-      $store[domain] = Site.new ports, :fresh, Time.now, sha256hash, certificate.x509.not_after
-    end
+    Freshcerts.sites[domain] = Freshcerts::Site.new ports, :fresh, Time.now, sha256hash, certificate.x509.not_after
     content_type 'application/x-tar'
     stream do |out|
       Gem::Package::TarWriter.new(out) do |tar|
@@ -88,12 +84,9 @@ class App < Sinatra::Base
   end
 
   get '/' do
-    domains = $store.transaction(true) do
-      Hash[$store.roots.map { |k| [k, $store[k]] }]
-    end
     headers "Refresh" => "30"
     erb :index, :locals => {
-      :domains => domains,
+      :domains => Freshcerts.sites.all,
       :config_host => request.host,
       :config_port => request.port,
       :config_secure => request.secure?,
