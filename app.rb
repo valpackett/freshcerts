@@ -3,67 +3,10 @@ require 'sinatra/streaming' # IO object compatibility
 require 'tilt/erubis'
 require 'active_support/time'
 require 'openssl'
-require 'acme-client'
-require 'yaml/store'
 require 'rubygems/package'
-
-ACME_ENDPOINT    = ENV['ACME_ENDPOINT']    || 'https://acme-staging.api.letsencrypt.org/'
-DATA_ROOT        = ENV['DATA_ROOT']        || File.join(File.dirname(__FILE__), 'data')
-ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
-STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
-
-CLIENT_SCRIPT    = File.read File.join File.dirname(__FILE__), 'freshcerts-client'
-
-unless File.exist? ACCOUNT_KEY_PATH
-  STDERR.puts "No account key found at #{ACCOUNT_KEY_PATH}. Create one with `openssl genrsa -out #{ACCOUNT_KEY_PATH} 4096`."
-  exit 1
-end
-pkey = OpenSSL::PKey::RSA.new File.read ACCOUNT_KEY_PATH
-$acme_client = Acme::Client.new :private_key => pkey, :endpoint => ACME_ENDPOINT
-
-$store = YAML::Store.new STORE_PATH
-$store.ultra_safe = true
-$store.instance_eval { |_| @thread_safe = true } # LOL: it's set to {} because the initializer calls super without args, and the 2nd arg has a different meaning
+require './common'
 
 $challenges = {}
-
-Site = Struct.new :ports, :status, :last_checked, :cert_sha256, :expires
-
-def hash_cert(certificate)
-  OpenSSL::Digest::SHA256.hexdigest(certificate.to_der).scan(/../).join(':')
-end
-
-def check_sites
-  $store.transaction do
-    $store.roots.each do |domain|
-      site = $store[domain]
-      site.ports.each do |port|
-        begin
-          puts "Checking #{domain}:#{port}"
-          OpenSSL::SSL::SSLSocket.new(TCPSocket.new(domain, port)).tap do |sock|
-            sock.sync_close = true
-            sock.connect
-            cert_sha256 = hash_cert(sock.peer_cert)
-            site.last_checked = Time.now
-            site.status = site.cert_sha256 == cert_sha256 ? :ok : :wrong_cert
-            if site.status == :wrong_cert
-              puts "#{domain}:#{port} wrong cert: #{cert_sha256}, should be #{site.cert_sha256}"
-            else
-              puts "#{domain}:#{port} ok"
-            end
-            sock.close
-          end
-        rescue Exception => e
-          puts "#{domain}:#{port} exception"
-          p e
-          site.status = :conn_error
-        end
-        sleep 2.seconds
-      end
-    end
-  end
-  sleep 5.minutes
-end
 
 class App < Sinatra::Base
   helpers Sinatra::Streaming
@@ -79,9 +22,10 @@ class App < Sinatra::Base
     site = $store.transaction(true) do
       $store[params[:domain]]
     end
-    halt 200, "No certs for domain #{params[:domain]} have been issued yet!\n" if site.nil?
-    halt 200, "Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
-    halt 200, "Wrong cert is used!\n" if site.status == :wrong_cert
+    halt 200, "Reissue reason: No certs for domain #{params[:domain]} have been issued yet!\n" if site.nil?
+    halt 200, "Reissue reason: Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
+    halt 200, "Reissue reason: Wrong cert is used!\n" if site.status == :wrong_cert
+    halt 200, "Reissue reason: Colud not connect!\n" if site.status == :conn_error
     halt 400, "Everything is OK, no reissue required.\n"
   end
 
