@@ -3,6 +3,7 @@ require 'sinatra/streaming' # IO object compatibility
 require 'tilt/erubis'
 require 'active_support/time'
 require 'openssl'
+require 'domain_name'
 require 'thread_safe'
 require 'rubygems/package'
 require './common'
@@ -10,22 +11,13 @@ require './common'
 $challenges = ThreadSafe::Cache.new
 
 class Freshcerts::App < Sinatra::Base
-  helpers Sinatra::Streaming
-  configure :production, :development do
-    enable :logging
+  class DomainError < StandardError
   end
 
-  get '/.well-known/acme-challenge/:id' do
-    $challenges[params[:id]]
-  end
-
-  get '/v1/cert/:domain/should_reissue' do
-    site = Freshcerts.sites[params[:domain]]
-    halt 200, "Reissue reason: No certs for domain #{params[:domain]} have been issued yet!\n" if site.nil?
-    halt 200, "Reissue reason: Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
-    halt 200, "Reissue reason: Wrong cert is used!\n" if site.status == :wrong_cert
-    halt 200, "Reissue reason: Colud not connect!\n" if site.status == :conn_error
-    halt 400, "Everything is OK, no reissue required.\n"
+  def domain
+    d = params[:domain]
+    raise DomainError if d.nil? || d.include?(' ')
+    @domain ||= DomainName(d).hostname
   end
 
   def issue_error!(msg)
@@ -33,16 +25,39 @@ class Freshcerts::App < Sinatra::Base
     halt 400, msg
   end
 
+  error OpenSSL::X509::RequestError do
+    issue_error! 'Could not read the CSR. You should send a valid CSR as a multipart part named "csr".'
+  end
+
+  error DomainError do
+    issue_error! "Domain '#{domain}' is not valid."
+  end
+
+  error Acme::Error::Malformed do
+    issue_error! "Domain '#{domain}' is not supported by the CA."
+  end
+
+  helpers Sinatra::Streaming
+  configure :production, :development do
+    enable :logging
+    disable :show_exceptions
+  end
+
+  get '/.well-known/acme-challenge/:id' do
+    $challenges[params[:id]]
+  end
+
+  get '/v1/cert/:domain/should_reissue' do
+    site = Freshcerts.sites[domain]
+    halt 200, "Reissue reason: No certs for domain #{domain} have been issued yet!\n" if site.nil?
+    halt 200, "Reissue reason: Cert expires sooner than 10 days!\n" if Time.now > site.expires - 10.days
+    halt 200, "Reissue reason: Wrong cert is used!\n" if site.status == :wrong_cert
+    halt 200, "Reissue reason: Colud not connect!\n" if site.status == :conn_error
+    halt 400, "Everything is OK, no reissue required.\n"
+  end
+
   post '/v1/cert/:domain/issue' do
-    begin
-      csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
-    rescue
-      issue_error! 'Could not read the CSR. You should send a valid CSR as a multipart part named "csr".'
-    end
-    domain = params[:domain]
-    unless !domain.nil? && domain =~ /(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}\.?$)/
-      issue_error! "Domain '#{domain}' is not valid."
-    end
+    csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
 
     authorization = Freshcerts.acme.authorize :domain => domain

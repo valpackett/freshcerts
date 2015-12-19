@@ -60,15 +60,13 @@ h2:first-child { margin-top: 0.5rem; }
   <% this_host = "http#{config_secure ? 's' : ''}://#{config_host}:#{config_port}" %>
   <h2>nginx configuration</h2>
   <p>domain verification:</p>
-  <pre><code>
-location ^~ /.well-known/acme-challenge/ {
+  <pre><code>location ^~ /.well-known/acme-challenge/ {
 	proxy_set_header Host $host;
 	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-	proxy_pass <%= this_host %>;
-}
-  </code></pre>
+        proxy_pass <strong><%= this_host %></strong>;
+}</code></pre>
   <p>strong TLS settings: <a href="https://cipherli.st">cipherli.st</a></p>
 
   <h2>client script for cron</h2>
-  <pre><code><%= client_script.sub('localhost:9292', this_host) %></code></pre>
+  <pre><code><%= client_script.sub('localhost:9292', "<strong>#{this_host}</strong>") %></code></pre>
 </main>
