@@ -12,6 +12,8 @@ GEM
       tzinfo (~> 1.1)
     backports (3.6.7)
     bindata (2.1.0)
+    domain_name (0.5.25)
+      unf (>= 0.0.5, < 1.0.0)
     erubis (2.7.0)
     faraday (0.9.2)
       multipart-post (>= 1.2, < 3)
@@ -31,7 +33,7 @@ GEM
     multipart-post (2.0.0)
     puma (2.15.3)
     rack (1.6.4)
-    rack-attack (4.3.0)
+    rack-attack (4.3.1)
       rack
     rack-protection (1.5.3)
       rack
@@ -53,6 +55,9 @@ GEM
     tilt (2.0.1)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.7.1)
     url_safe_base64 (0.2.2)
 
 PLATFORMS
@@ -61,6 +66,7 @@ PLATFORMS
 DEPENDENCIES
   acme-client
   activesupport
+  domain_name
   erubis
   mail
   puma
