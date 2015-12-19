@@ -9,12 +9,13 @@ DOMAIN="$1"
 SUBJ="$2"
 PORTS="$3"
 RELOAD_CMD="$4"
+AUTH_TOKEN="$5"
 
 KEY_PATH="${KEYS_DIRECTORY}/${DOMAIN}.key.pem"
 
 curl -f "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/should_reissue" 2>/dev/null && \
 	openssl genrsa -out "$KEY_PATH" 2048 2>/dev/null && \
 	openssl req -new -batch -subj "$SUBJ" -key "$KEY_PATH" -out /dev/stdout | \
-	curl -s -X POST "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/issue" -F "csr=@-" -F "ports=$PORTS" -F "domain=$DOMAIN" | \
+	curl -s -X POST "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/issue" -F "csr=@-" -F "ports=$PORTS" -F "domain=$DOMAIN" -F "token=$AUTH_TOKEN" | \
 	tar -C "$KEYS_DIRECTORY" -xf - && \
 	sh -c "$RELOAD_CMD"
