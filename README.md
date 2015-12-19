@@ -39,6 +39,12 @@ $ chmod 0400 data/account.key.pem
 $ bundle exec ./register-account-key
 ```
 
+Generate a tokens key:
+
+```bash
+$ openssl ecparam -genkey -name prime256v1 -out data/tokens.key.pem
+```
+
 Run:
 
 ```bash
@@ -52,14 +58,16 @@ Set `RACK_ENV=production` there.
 
 For every domain:
 
+Generate an auth token with `bundle exec ./generate-token`.
+
 Configure the HTTP server to forward `/.well-known/acme-challenge/*` requests to the freshcerts server.
 
 Configure cron to run the `freshcerts-client` script every day.
 
-Args: domain, subject, ports (comma separated), reload command. Like this:
+Args: domain, subject, ports (comma separated), reload command, auth token. Like this:
 
 ```
-FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com /CN=example.com 443 "service nginx reload"
+FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com /CN=example.com 443 "service nginx reload" "eyJ0eXAiOi..."
 ```
 
 Figure out cert paths and file permissions :-)

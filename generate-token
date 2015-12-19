@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require './common'
+
+token = Freshcerts.tokens.generate ARGV.join(' ').strip
+Freshcerts.tokens.check! token
+puts token

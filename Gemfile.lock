@@ -68,6 +68,7 @@ DEPENDENCIES
   activesupport
   domain_name
   erubis
+  json-jwt
   mail
   puma
   rack-attack

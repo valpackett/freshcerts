@@ -33,6 +33,10 @@ class Freshcerts::App < Sinatra::Base
     issue_error! "Domain '#{domain}' is not valid."
   end
 
+  error Freshcerts::TokenError do
+    issue_error! 'A valid authentication token was not provided.'
+  end
+
   error Acme::Error::Malformed do
     issue_error! "Domain '#{domain}' is not supported by the CA."
   end
@@ -57,6 +61,7 @@ class Freshcerts::App < Sinatra::Base
   end
 
   post '/v1/cert/:domain/issue' do
+    Freshcerts.tokens.check! params[:token]
     csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
 
