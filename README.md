@@ -1,5 +1,7 @@
 # freshcerts [![unlicense](https://img.shields.io/badge/un-license-green.svg?style=flat)](http://unlicense.org)
 
+![Screenshot](https://files.app.net/h02q76bXk.png)
+
 [ACME](https://letsencrypt.github.io/acme-spec/) (currently implemented by [Let's Encrypt](https://letsencrypt.org)) is a way to automatically (re)issue TLS certificates.
 
 Most ACME clients are designed to run on the same machine as your TLS services. 
@@ -23,7 +25,7 @@ $ bundle install --path vendor/bundle
 $ mkdir data
 ```
 
-Use environment variables to configure the app.
+Use environment variables to configure the app. Read `common.rb` to see which variables are available.
 You probably should change the ACME endpoint (by default, Let's Encrypt **staging** is used, not production):
 
 ```bash
@@ -52,7 +54,7 @@ $ bundle exec rackup -p 9393
 ```
 
 In production, you'll want to configure your process manager to run it.
-Set `RACK_ENV=production` there.
+Set `RACK_ENV=production` there in addition to the config variables (`ACME_ENDPOINT`, etc.)
 
 ## Usage
 

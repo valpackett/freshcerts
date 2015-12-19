@@ -6,12 +6,16 @@ require 'mail'
 
 ACME_ENDPOINT    = ENV['ACME_ENDPOINT']    || 'https://acme-staging.api.letsencrypt.org/'
 DATA_ROOT        = ENV['DATA_ROOT']        || File.join(File.dirname(__FILE__), 'data')
-ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
-STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
-TOKENS_KEY_PATH  = ENV['TOKENS_KEY_PATH']  || File.join(DATA_ROOT, 'tokens.key.pem')
 ADMIN_EMAIL      = ENV['ADMIN_EMAIL']      || 'root@localhost'
 SMTP_ADDRESS     = ENV['SMTP_ADDRESS']     || 'localhost'
 SMTP_PORT        =(ENV['SMTP_PORT']        || '25').to_i
+SMTP_USERNAME    = ENV['SMTP_USERNAME']
+SMTP_PASSWORD    = ENV['SMTP_PASSWORD']
+SMTP_AUTH        = ENV['SMTP_AUTH']
+
+ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
+STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
+TOKENS_KEY_PATH  = ENV['TOKENS_KEY_PATH']  || File.join(DATA_ROOT, 'tokens.key.pem')
 
 CLIENT_SCRIPT    = File.read File.join File.dirname(__FILE__), 'freshcerts-client'
 TOKENS_EC_CURVE  = 'prime256v1'
@@ -27,7 +31,7 @@ unless File.exist? TOKENS_KEY_PATH
 end
 
 Mail.defaults do
-  delivery_method :smtp, :address => SMTP_ADDRESS, :port => SMTP_PORT
+  delivery_method :smtp, :address => SMTP_ADDRESS, :port => SMTP_PORT, :user_name => SMTP_USERNAME, :password => SMTP_PASSWORD, :authentication => SMTP_AUTH
 end
 
 module Freshcerts
