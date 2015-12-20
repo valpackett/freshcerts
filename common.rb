@@ -105,5 +105,7 @@ module Freshcerts
       subject "freshcerts event: #{event}"
       body description
     }.deliver
+  rescue => e
+    puts "Error sending mail! Exception: #{e.class}: #{e.message}"
   end
 end

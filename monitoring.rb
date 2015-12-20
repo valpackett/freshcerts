@@ -4,10 +4,10 @@ require './common'
 
 module Freshcerts::Monitoring
   def self.check_site(domain, port, wanted_hash)
-    OpenSSL::SSL::SSLSocket.new(TCPSocket.new(domain, port)).tap do |sock|
+    OpenSSL::SSL::SSLSocket.new(TCPSocket.new domain, port).tap do |sock|
       sock.sync_close = true
       sock.connect
-      found_hash = Freshcerts.hash_cert(sock.peer_cert)
+      found_hash = Freshcerts.hash_cert sock.peer_cert
       yield (wanted_hash == found_hash ? :ok : :wrong_cert), found_hash
       sock.close
     end
