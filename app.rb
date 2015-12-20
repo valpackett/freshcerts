@@ -48,6 +48,7 @@ class Freshcerts::App < Sinatra::Base
   end
 
   get '/.well-known/acme-challenge/:id' do
+    content_type 'text/plain'
     $challenges[params[:id]]
   end
 
@@ -67,7 +68,7 @@ class Freshcerts::App < Sinatra::Base
 
     authorization = Freshcerts.acme.authorize :domain => domain
     challenge = authorization.http01
-    challenge_id = challenge.filename.sub(/.*challenge\/?/, '')
+    challenge_id = challenge.filename.sub /.*challenge\/?/, ''
     $challenges[challenge_id] = challenge.file_content
     logger.info "challenge domain=#{domain} id=#{challenge_id}"
     sleep 0.1
@@ -79,11 +80,11 @@ class Freshcerts::App < Sinatra::Base
     logger.info "challenge domain=#{domain} id=#{challenge_id} status=#{status}"
     unless status == 'valid'
       $challenges.delete challenge_id
-      issue_error! "CA returned challenge validation status: #{status}."
+      issue_error! "CA returned challenge validation status: #{status}.\n\nChallenge:\n#{challenge.to_yaml}"
     end
     $challenges.delete challenge_id
 
-    certificate = Freshcerts.acme.new_certificate(csr)
+    certificate = Freshcerts.acme.new_certificate csr
     cert_hash = Freshcerts.hash_cert certificate
     logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{cert_hash} expires=#{certificate.x509.not_after.to_s}"
     Freshcerts.sites[domain] = Freshcerts::Site.new ports, :fresh, Time.now, cert_hash, certificate.x509.not_after
