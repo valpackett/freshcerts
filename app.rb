@@ -37,7 +37,7 @@ class Freshcerts::App < Sinatra::Base
     issue_error! 'A valid authentication token was not provided.'
   end
 
-  error Acme::Error::Malformed do
+  error Acme::Client::Error::Malformed do
     issue_error! "Domain '#{domain}' is not supported by the CA."
   end
 
