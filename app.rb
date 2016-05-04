@@ -63,30 +63,42 @@ class Freshcerts::App < Sinatra::Base
 
   post '/v1/cert/:domain/issue' do
     Freshcerts.tokens.check! params[:token]
-    csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
-    ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
+    challenge = make_challenge
+    verify_challenge challenge
+    issue
+  end
 
+  def make_challenge
     authorization = Freshcerts.acme.authorize :domain => domain
     challenge = authorization.http01
     challenge_id = challenge.filename.sub /.*challenge\/?/, ''
     $challenges[challenge_id] = challenge.file_content
-    logger.info "challenge domain=#{domain} id=#{challenge_id}"
+    logger.info "make_challenge domain=#{domain} id=#{challenge_id}"
+    challenge
+  end
+
+  def verify_challenge(challenge)
     sleep 0.1
     challenge.request_verification
     status = nil
     while (status = challenge.verify_status) == 'pending'
       sleep 0.5
     end
-    logger.info "challenge domain=#{domain} id=#{challenge_id} status=#{status}"
+    challenge_id = challenge.filename.sub /.*challenge\/?/, ''
+    logger.info "verify_challenge domain=#{domain} id=#{challenge_id} status=#{status}"
     unless status == 'valid'
       $challenges.delete challenge_id
       issue_error! "CA returned challenge validation status: #{status}.\n\nChallenge:\n#{challenge.to_yaml}"
     end
     $challenges.delete challenge_id
+  end
 
+  def issue
+    csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
+    ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
     certificate = Freshcerts.acme.new_certificate csr
     cert_hash = Freshcerts.hash_cert certificate
-    logger.info "certificate domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{cert_hash} expires=#{certificate.x509.not_after.to_s}"
+    logger.info "issue domain=#{domain} subject=#{certificate.x509.subject.to_s} sha256=#{cert_hash} expires=#{certificate.x509.not_after.to_s}"
     Freshcerts.sites[domain] = Freshcerts::Site.new ports, :fresh, Time.now, cert_hash, certificate.x509.not_after
     content_type 'application/x-tar'
     stream do |out|
