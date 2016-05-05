@@ -1,0 +1,111 @@
+#!/usr/bin/env ruby
+#
+# Requires: gem install multipart-post
+
+require 'net/http'
+require 'net/http/post/multipart'
+require 'rubygems/package'
+require 'openssl'
+require 'uri'
+require 'json'
+
+class CPanelClient
+  def initialize(host, username, password)
+    uri = URI.parse host
+    @http = Net::HTTP.new uri.host, uri.port
+    @http.use_ssl = true
+    @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+    @username = username
+    @password = password
+  end
+
+  def uapi_get(mod, fun, params = {})
+    uri = URI.parse "/execute/#{mod}/#{fun}"
+    uri.query = URI.encode_www_form(params)
+    req = Net::HTTP::Get.new uri.to_s
+    req.basic_auth @username, @password
+    handle_resp @http.request req
+  end
+
+  def uapi_post(mod, fun, params = {})
+    req = Net::HTTP::Post.new "/execute/#{mod}/#{fun}", params
+    req.basic_auth @username, @password
+    req.set_form_data params
+    handle_resp @http.request req
+  end
+
+  def uapi_post_multi(mod, fun, params = {})
+    req = Net::HTTP::Post::Multipart.new "/execute/#{mod}/#{fun}", params
+    req.basic_auth @username, @password
+    handle_resp @http.request req
+  end
+
+  private
+  def handle_resp(resp)
+    raise "Bad response: #{resp.code} #{resp.body}" if resp.code.to_i >= 300
+    jresp = JSON.parse(resp.body)
+    raise "Errors: #{jresp['errors']}" if (jresp['errors'] || []).length > 0
+    jresp['data']
+  end
+end
+
+class FreshcertsClient
+  def initialize(host, token)
+    uri = URI.parse host
+    @http = Net::HTTP.new uri.host, uri.port
+    @token = token
+  end
+
+  def challenge(domain)
+    req = Net::HTTP::Post.new "/v1/cert/#{domain}/issue-multistep/challenge?token=#{URI.encode @token}"
+    JSON.parse handle_resp @http.request req
+  end
+
+  def issue(domain, challenge)
+    key = OpenSSL::PKey::RSA.new 2048
+    csr = OpenSSL::X509::Request.new
+    csr.version = 0
+    csr.subject = OpenSSL::X509::Name.new([
+      ['CN', domain, OpenSSL::ASN1::UTF8STRING],
+      ['subjectAltName', "DNS.1=www.#{domain}", OpenSSL::ASN1::UTF8STRING]
+    ])
+    csr.public_key = key.public_key
+    req = Net::HTTP::Post::Multipart.new "/v1/cert/#{domain}/issue-multistep/issue?token=#{URI.encode @token}",
+      'challenge' => UploadIO.new(StringIO.new(challenge.to_h.to_json), 'application/json', 'challenge'),
+      'csr' => UploadIO.new(StringIO.new(csr.sign(key, OpenSSL::Digest::SHA256.new).to_s), 'application/x-pem-file', 'csr')
+    resp_body = handle_resp @http.request req
+    result = {
+      :key => key.to_s
+    }
+    Gem::Package::TarReader.new(StringIO.new(resp_body)).each do |entry|
+      result[:cert] = entry.read if entry.full_name =~ /cert.pem/
+      result[:cert_chain] = entry.read if entry.full_name =~ /cert.chain.pem/
+      result[:cert_fullchain] = entry.read if entry.full_name =~ /cert.fullchain.pem/
+    end
+    result
+  end
+
+  private
+  def handle_resp(resp)
+    raise "Bad response: #{resp.code} #{resp.body}" if resp.code.to_i >= 300
+    resp.body
+  end
+end
+
+panel = CPanelClient.new ENV['CPANEL_HOST'], ENV['CPANEL_USERNAME'], ENV['CPANEL_PASSWORD']
+certs = FreshcertsClient.new ENV['FRESHCERTS_HOST'], ENV['FRESHCERTS_TOKEN']
+domains_resp = panel.uapi_get 'DomainInfo', 'list_domains'
+domains = domains_resp['addon_domains'] + domains_resp['sub_domains'] + domains_resp['parked_domains'] + [domains_resp['main_domain']]
+domains.each do |domain|
+  challenge = certs.challenge domain
+  challenge_id = challenge['filename'].sub /.*challenge\/?/, ''
+  upload_resp = panel.uapi_post_multi 'Fileman', 'upload_files',
+    'dir' => 'public_html/.well-known/acme-challenge',
+    'file-1' => UploadIO.new(StringIO.new(challenge['file_content']), 'text/plain', challenge_id)
+  raise "Upload failed!" if upload_resp['succeeded'] != 1
+  data = certs.issue domain, challenge
+  p panel.uapi_post 'SSL', 'install_ssl', 'domain' => domain,
+    'cert' => data[:cert], 'key' => data[:key], 'cabundle' => data[:cert_chain]
+end
+
+p panel.uapi_get 'SSL', 'list_keys'

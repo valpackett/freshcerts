@@ -68,6 +68,23 @@ class Freshcerts::App < Sinatra::Base
     issue
   end
 
+  post '/v1/cert/:domain/issue-multistep/challenge' do
+    Freshcerts.tokens.check! params[:token]
+    challenge = make_challenge
+    data = challenge.to_h
+    data[:file_content] = challenge.file_content
+    data[:filename] = challenge.filename
+    content_type :json
+    data.to_json
+  end
+
+  post '/v1/cert/:domain/issue-multistep/issue' do
+    Freshcerts.tokens.check! params[:token]
+    challenge = Freshcerts.acme.challenge_from_hash JSON.parse params[:challenge][:tempfile].read
+    verify_challenge challenge
+    issue
+  end
+
   def make_challenge
     authorization = Freshcerts.acme.authorize :domain => domain
     challenge = authorization.http01
