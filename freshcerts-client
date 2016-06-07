@@ -25,4 +25,5 @@ curl -f "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/should_reissue" 2>/dev/null && \
 	curl -s -X POST "${FRESHCERTS_HOST}/v1/cert/${DOMAIN}/issue" \
 		-F "csr=@-" -F "ports=$PORTS" -F "domain=$DOMAIN" -F "token=$AUTH_TOKEN" | \
 	tar -C "$KEYS_DIRECTORY" -xf - && \
+	chmod 0400 "$KEY_PATH" && \
 	sh -c "$RELOAD_CMD"
