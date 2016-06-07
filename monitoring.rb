@@ -5,6 +5,7 @@ require './common'
 module Freshcerts::Monitoring
   def self.check_site(domain, port, wanted_hash)
     OpenSSL::SSL::SSLSocket.new(TCPSocket.new domain, port).tap do |sock|
+      sock.hostname = domain
       sock.sync_close = true
       sock.connect
       found_hash = Freshcerts.hash_cert sock.peer_cert
