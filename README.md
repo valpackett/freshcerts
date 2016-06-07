@@ -33,18 +33,18 @@ $ export ACME_ENDPOINT="https://acme-v01.api.letsencrypt.org/"
 $ export ADMIN_EMAIL="support@example.com"
 ```
 
+Generate a tokens key:
+
+```bash
+$ openssl ecparam -genkey -name prime256v1 -out data/tokens.key.pem
+```
+
 Generate and register an account key:
 
 ```bash
 $ openssl genrsa -out data/account.key.pem 4096
 $ chmod 0400 data/account.key.pem
 $ bundle exec ./register-account-key
-```
-
-Generate a tokens key:
-
-```bash
-$ openssl ecparam -genkey -name prime256v1 -out data/tokens.key.pem
 ```
 
 Run:
