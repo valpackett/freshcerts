@@ -12,6 +12,7 @@ SMTP_PORT        =(ENV['SMTP_PORT']        || '25').to_i
 SMTP_USERNAME    = ENV['SMTP_USERNAME']
 SMTP_PASSWORD    = ENV['SMTP_PASSWORD']
 SMTP_AUTH        = ENV['SMTP_AUTH']
+SENDER_EMAIL     = ENV['SENDER_EMAIL']     || "#{Etc.getlogin}@#{Socket.gethostname}"
 
 ACCOUNT_KEY_PATH = ENV['ACCOUNT_KEY_PATH'] || File.join(DATA_ROOT, 'account.key.pem')
 STORE_PATH       = ENV['STORE_PATH']       || File.join(DATA_ROOT, 'store.yaml')
@@ -100,7 +101,7 @@ module Freshcerts
 
   def self.notify_admin(event, description)
     Mail.new {
-      from "#{Etc.getlogin}@#{Socket.gethostname}"
+      from SENDER_EMAIL
       to ADMIN_EMAIL
       subject "freshcerts event: #{event}"
       body description
