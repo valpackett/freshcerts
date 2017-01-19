@@ -16,7 +16,7 @@ Email notifications are sent to the admins for all errors found by monitoring an
 
 ## Installation
 
-It's a typical Ruby app, so you'll need [Bundler](http://bundler.io):
+It's a typical Ruby app, so you'll need [Bundler](https://bundler.io):
 
 ```bash
 $ git clone https://github.com/myfreeweb/freshcerts.git
@@ -53,8 +53,21 @@ Run:
 $ bundle exec rackup -p 9393
 ```
 
+(or `bundle exec puma ...`)
+
 In production, you'll want to configure your process manager to run it.
 Set `RACK_ENV=production` there in addition to the config variables (`ACME_ENDPOINT`, etc.)
+
+### Minimizing Memory Footprint
+
+If you want to run freshcerts on e.g. a cheap VPS with low RAM:
+
+- by default, the monitoring worker runs in a thread inside of the app. You can run it separately with cron:
+  - set `SEPARATE_MONITORING=1` for the server process (puma/rackup);
+  - put `bundle exec ruby monitoring.rb` into your crontab for every 10 minutes or so.
+- run the server process under [soad](https://github.com/myfreeweb/soad)! It will start the server on demand and shut it down when it's inactive. Don't set the `time-until-stop` to something ridiculously low like 1 second, because freshcerts keeps challenges in memory.
+
+This way, memory will only be used when there are requests to the freshcerts server or when it's doing the monitoring.
 
 ## Usage
 
@@ -78,7 +91,7 @@ Figure out cert paths and file permissions :-)
 
 Please feel free to submit pull requests!
 
-By participating in this project you agree to follow the [Contributor Code of Conduct](http://contributor-covenant.org/version/1/2/0/).
+By participating in this project you agree to follow the [Contributor Code of Conduct](http://contributor-covenant.org/version/1/4/).
 
 [The list of contributors is available on GitHub](https://github.com/myfreeweb/freshcerts/graphs/contributors).
 
