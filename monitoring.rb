@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 require 'openssl'
 require 'active_support/time'
 require './common'
@@ -41,6 +42,9 @@ module Freshcerts::Monitoring
         sleep 2.seconds
       end
     end
-    sleep 5.minutes
   end
+end
+
+if File.identical?(__FILE__, $0)
+  Freshcerts::Monitoring.check_sites
 end
