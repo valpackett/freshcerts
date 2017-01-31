@@ -85,13 +85,17 @@ Args: domain, subject, ports (comma separated), reload command, auth token. Like
 FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com /CN=example.com 443 "service nginx reload" "eyJ0eXAiOi..."
 ```
 
-If you want to issue a certificate for multiple domains:
+And figure out cert paths and file permissions :-)
+
+### Multi-domain certificates (SAN, Subject Alternative Name)
+
+If you want to issue a certificate for multiple domains, there's a more advanced Ruby client, use it like that:
 
 ```
-FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com,some.thing /CN=example.com/subjectAltName=DNS.1=some.thing 443 "service nginx reload" "eyJ0eXAiOi..."
+FRESHCERTS_HOST="https://certs.example.com:4333" FRESHCERTS_TOKEN="eyJ0eXAiOi..." freshcerts-multi-client example.com,www.example.com 443 && service nginx reload
 ```
 
-Figure out cert paths and file permissions :-)
+If you can't use Ruby, you can modify the shell client to support multi-domain certificates. [Set up openssl.cnf to read SAN from the environment](https://security.stackexchange.com/a/86999), modify the client to read that config section (add e.g. `-extensions san_env` to the CSR generation command) and pass the domains via that variable. For the freshcerts part (first arg), use a comma-separated list of domains instead of just one domain. Do not use `subjectAltName` as a subject field, that's a special syntax supported by *some* CAs (not Let's Encrypt!) that will turn it into real SAN fields.
 
 ## Contributing
 
