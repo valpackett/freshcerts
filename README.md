@@ -85,6 +85,12 @@ Args: domain, subject, ports (comma separated), reload command, auth token. Like
 FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com /CN=example.com 443 "service nginx reload" "eyJ0eXAiOi..."
 ```
 
+If you want to issue a certificate for multiple domains:
+
+```
+FRESHCERTS_HOST="https://certs.example.com:4333" freshcerts-client example.com,some.thing /CN=example.com/subjectAltName=DNS.1=some.thing 443 "service nginx reload" "eyJ0eXAiOi..."
+```
+
 Figure out cert paths and file permissions :-)
 
 ## Contributing
