@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+# Freshcerts client in Ruby with support for multi-domain certs (SAN)
+# https://github.com/myfreeweb/freshcerts
+#
+# Run this via cron every day for each domain
+
+require 'openssl'
+require 'net/http'
+require 'uri'
+require 'open3'
+require 'fileutils'
+
+AUTH_TOKEN      = ENV['FRESHCERTS_TOKEN']
+FRESHCERTS_HOST = ENV['FRESHCERTS_HOST'] || 'localhost:9292'
+KEYS_DIRECTORY  = ENV['KEYS_DIRECTORY']  || '/usr/local/etc/certs'
+
+def gen_csr(key, domains)
+  csr = OpenSSL::X509::Request.new
+  csr.version = 0
+  csr.public_key = key.public_key
+  csr.subject = OpenSSL::X509::Name.new([
+    ['CN', domains.first, OpenSSL::ASN1::UTF8STRING]
+  ])
+  ef = OpenSSL::X509::ExtensionFactory.new
+  extensions = [
+    ['subjectAltName', domains.map { |d| "DNS:#{d}" }.join(',')]
+  ].map { |e| ef.create_extension(*e) }
+  attr_values = OpenSSL::ASN1::Set([OpenSSL::ASN1::Sequence(extensions)])
+  csr.add_attribute OpenSSL::X509::Attribute.new('extReq', attr_values)
+  csr.add_attribute OpenSSL::X509::Attribute.new('msExtReq', attr_values)
+  csr.sign(key, OpenSSL::Digest::SHA256.new)
+end
+
+def issue(domains, ports)
+  key = OpenSSL::PKey::RSA.new 2048
+  keypath = File.join(KEYS_DIRECTORY, "#{domains.join(',')}.key.pem")
+  File.write "#{keypath}.new", key.to_s
+  # multipart requires a gem (or reimplementing it)
+  # ruby tar support is in rubygems' code which might be absent
+  stdin, wait_thrs = Open3.pipeline_w(
+    ['curl', '-s', '-X', 'POST',
+     "#{FRESHCERTS_HOST}/v1/cert/#{domains.join(',')}/issue",
+     '-F', 'csr=@-', '-F', "ports=#{ports}", '-F', "token=#{AUTH_TOKEN}"],
+    ['tar', '-C', KEYS_DIRECTORY, '-xf', '-']
+  )
+  stdin.write gen_csr(key, domains).to_s
+  stdin.close
+  exit_status = wait_thrs.last.value
+  exit exit_status.exitstatus unless exit_status.success?
+  FileUtils.mv "#{keypath}.new", keypath
+end
+
+domains = ARGV.shift.split(',')
+ports = ARGV.shift
+resp = Net::HTTP.get_response(URI("#{FRESHCERTS_HOST}/v1/cert/#{domains.join(',')}/should_reissue"))
+issue(domains, ports) if resp.code == "200"
