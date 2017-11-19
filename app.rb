@@ -127,8 +127,7 @@ class Freshcerts::App < Sinatra::Base
   end
 
   def issue
-    logger.info "issue file=#{params[:csr]}"
-    csr = OpenSSL::X509::Request.new params[:csr][:tempfile].read
+    csr = OpenSSL::X509::Request.new (params[:csr].is_a?(String) ? params[:csr] : params[:csr][:tempfile].read)
     ports = (params[:ports] || '443').split(',').map { |port| port.strip.to_i }
     certificate = Freshcerts.acme.new_certificate csr
     cert_hash = Freshcerts.hash_cert certificate
