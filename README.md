@@ -19,38 +19,38 @@ Email notifications are sent to the admins for all errors found by monitoring an
 It's a typical Ruby app, so you'll need [Bundler](https://bundler.io):
 
 ```bash
-$ git clone https://github.com/myfreeweb/freshcerts.git
-$ cd freshcerts
-$ bundle install --path vendor/bundle
-$ mkdir data
+git clone https://github.com/myfreeweb/freshcerts.git
+cd freshcerts
+bundle install --path vendor/bundle
+mkdir data
 ```
 
 Use environment variables to configure the app. Read `common.rb` to see which variables are available.
 You probably should change the ACME endpoint (by default, Let's Encrypt **staging** is used, not production):
 
 ```bash
-$ export ACME_ENDPOINT="https://acme-v01.api.letsencrypt.org/"
-$ export ADMIN_EMAIL="support@example.com"
+export ACME_ENDPOINT="https://acme-v01.api.letsencrypt.org/"
+export ADMIN_EMAIL="support@example.com"
 ```
 
 Generate a tokens key:
 
 ```bash
-$ openssl ecparam -genkey -name prime256v1 -out data/tokens.key.pem
+openssl ecparam -genkey -name prime256v1 -out data/tokens.key.pem
 ```
 
 Generate and register an account key:
 
 ```bash
-$ openssl genrsa -out data/account.key.pem 4096
-$ chmod 0400 data/account.key.pem
-$ bundle exec ./register-account-key
+openssl genrsa -out data/account.key.pem 4096
+chmod 0400 data/account.key.pem
+bundle exec ./register-account-key
 ```
 
 Run:
 
 ```bash
-$ bundle exec rackup -p 9393
+bundle exec rackup -p 9393
 ```
 
 (or `bundle exec puma ...`)
