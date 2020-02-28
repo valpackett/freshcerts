@@ -31,7 +31,7 @@ GEM
     multipart-post (2.0.0)
     mustermann (1.0.2)
     psych (3.0.2)
-    puma (3.12.2)
+    puma (3.12.3)
     rack (2.0.8)
     rack-attack (4.3.1)
       rack
