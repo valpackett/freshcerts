@@ -10,7 +10,7 @@ GEM
       tzinfo (~> 1.1)
     aes_key_wrap (1.0.1)
     backports (3.11.3)
-    bindata (2.4.4)
+    bindata (2.4.10)
     concurrent-ruby (1.1.6)
     domain_name (0.5.20180417)
       unf (>= 0.0.5, < 1.0.0)
