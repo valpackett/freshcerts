@@ -32,7 +32,7 @@ GEM
     mustermann (1.0.2)
     nio4r (2.5.8)
     psych (3.0.2)
-    puma (4.3.11)
+    puma (4.3.12)
       nio4r (~> 2.0)
     rack (2.2.3)
     rack-attack (4.3.1)
