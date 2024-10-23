@@ -1,6 +1,5 @@
 require 'sinatra/base'
 require 'sinatra/streaming' # IO object compatibility
-require 'tilt/erubis'
 require 'active_support/time'
 require 'openssl'
 require 'domain_name'

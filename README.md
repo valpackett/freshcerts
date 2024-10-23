@@ -50,10 +50,8 @@ bundle exec ./register-account-key
 Run:
 
 ```bash
-bundle exec rackup -p 9393
+bundle exec puma -p 9393
 ```
-
-(or `bundle exec puma ...`)
 
 In production, you'll want to configure your process manager to run it.
 Set `RACK_ENV=production` there in addition to the config variables (`ACME_ENDPOINT`, etc.)
